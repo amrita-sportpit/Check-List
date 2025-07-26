@@ -105,6 +105,20 @@
             left: 100%;
         }
         
+        .view-btn {
+            margin-bottom: 1rem;
+        }
+        
+        .download-only-btn {
+            background: linear-gradient(45deg, #666, #999);
+            box-shadow: 0 10px 20px rgba(102, 102, 102, 0.3);
+        }
+        
+        .download-only-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(102, 102, 102, 0.4);
+        }
+        
         .icon {
             margin-right: 0.5rem;
             font-size: 1.2rem;
@@ -133,6 +147,13 @@
             .download-btn {
                 padding: 0.8rem 1.5rem;
                 font-size: 1rem;
+                width: 100%;
+                max-width: 280px;
+                margin: 0.5rem 0;
+            }
+            
+            .view-btn {
+                margin-bottom: 1rem;
             }
         }
     </style>
@@ -145,16 +166,24 @@
         </p>
         
         <a href="Чек-Лист Амрита.pdf" 
-           class="download-btn" 
+           class="download-btn view-btn" 
            target="_blank" 
            rel="noopener noreferrer"
            onclick="handleDownload(this, event)">
-            <span class="icon">🥤</span>
-            Открыть Чек-лист
+            <span class="icon">👁️</span>
+            Посмотреть
+        </a>
+        
+        <a href="Чек-Лист Амрита.pdf" 
+           class="download-btn download-only-btn" 
+           download="Чек-Лист по Спортпиту.pdf"
+           onclick="handleDirectDownload(this, event)">
+            <span class="icon">⬇️</span>
+            Скачать
         </a>
         
         <div class="warning">
-            <strong>🏋️ Совет:</strong> Если файл не открывается, попробуйте скопировать ссылку и вставить её в браузер Safari, Chrome или другой внешний браузер.
+            <strong>🏋️ Совет:</strong> Кнопка "Посмотреть" откроет PDF для просмотра. Кнопка "Скачать" сохранит файл на ваше устройство. Если не работает - откройте эту страницу в Safari, Chrome или другом внешнем браузере.
         </div>
     </div>
 
@@ -182,6 +211,49 @@
             return true;
         }
         
+        function handleDirectDownload(element, event) {
+            event.preventDefault();
+            
+            const url = element.href;
+            const filename = element.getAttribute('download') || 'Чек-Лист по Спортпиту.pdf';
+            
+            // Создаем временную ссылку для принудительного скачивания
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            
+            // Добавляем в DOM, кликаем и удаляем
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Для мобильных устройств дополнительные попытки
+            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                // Пробуем альтернативный способ через window.open
+                setTimeout(() => {
+                    const newWindow = window.open(url + '?download=1', '_blank');
+                    if (newWindow) {
+                        newWindow.document.write(`
+                            <html>
+                                <head>
+                                    <title>Скачивание...</title>
+                                    <meta http-equiv="refresh" content="1;url=${url}">
+                                </head>
+                                <body>
+                                    <h2>Идет скачивание файла...</h2>
+                                    <p>Если скачивание не началось автоматически, <a href="${url}" download="${filename}">нажмите здесь</a></p>
+                                </body>
+                            </html>
+                        `);
+                    } else {
+                        // Если window.open заблокирован, перенаправляем на файл
+                        window.location.href = url;
+                    }
+                }, 100);
+            }
+        }
+        
         // Дополнительная проверка для обхода встроенных браузеров Instagram/Facebook
         window.addEventListener('DOMContentLoaded', function() {
             // Проверяем, если мы внутри встроенного браузера
@@ -193,7 +265,7 @@
             
             if (isInApp) {
                 const warning = document.querySelector('.warning');
-                warning.innerHTML = '<strong>🚨 Внимание:</strong> Вы находитесь во встроенном браузере приложения. Для корректного открытия PDF скопируйте ссылку на эту страницу и откройте её в Safari, Chrome или другом внешнем браузере.';
+                warning.innerHTML = '<strong>🚨 Внимание:</strong> Вы находитесь во встроенном браузере приложения. Для корректного скачивания и просмотра PDF скопируйте ссылку на эту страницу и откройте её в Safari, Chrome или другом внешнем браузере.';
                 warning.style.background = 'rgba(255, 107, 53, 0.1)';
                 warning.style.borderLeftColor = '#ff6b35';
                 warning.style.color = '#cc2900';
