@@ -278,73 +278,79 @@
             element.innerHTML = '<span class="icon">⏳</span>Скачивание...';
             element.style.pointerEvents = 'none';
             
-            // Восстанавливаем кнопку через 3 секунды
-            setTimeout(() => {
-                element.innerHTML = originalText;
-                element.style.pointerEvents = 'auto';
-            }, 3000);
-            
-            // В любом случае пытаемся скачать файл
-            // Создаем временную ссылку для принудительного скачивания
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            link.style.display = 'none';
-            
-            // Добавляем в DOM, кликаем и удаляем
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Дополнительные методы для принудительного скачивания на мобильных устройствах
-            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                // Метод 1: через fetch и blob (работает в большинстве случаев)
-                fetch(url, { 
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/pdf'
-                    }
-                })
+            // Принудительное скачивание через fetch и blob
+            fetch(url)
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     return response.blob();
                 })
                 .then(blob => {
-                    // Создаем blob URL
-                    const objectUrl = URL.createObjectURL(blob);
+                    // Создаем новый blob с правильным типом для принудительного скачивания
+                    const downloadBlob = new Blob([blob], { 
+                        type: 'application/octet-stream' // Принудительно заставляем браузер скачивать
+                    });
+                    
+                    // Создаем URL для blob
+                    const blobUrl = URL.createObjectURL(downloadBlob);
+                    
+                    // Создаем временную ссылку для скачивания
                     const downloadLink = document.createElement('a');
-                    downloadLink.href = objectUrl;
+                    downloadLink.href = blobUrl;
                     downloadLink.download = filename;
                     downloadLink.style.display = 'none';
                     
-                    // Добавляем событие для очистки URL после скачивания
-                    downloadLink.addEventListener('click', () => {
-                        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-                    });
-                    
+                    // Добавляем в DOM и кликаем
                     document.body.appendChild(downloadLink);
                     downloadLink.click();
+                    
+                    // Удаляем ссылку и освобождаем память
                     document.body.removeChild(downloadLink);
+                    setTimeout(() => {
+                        URL.revokeObjectURL(blobUrl);
+                    }, 100);
+                    
+                    // Восстанавливаем кнопку
+                    element.innerHTML = originalText;
+                    element.style.pointerEvents = 'auto';
                 })
                 .catch(error => {
-                    console.log('Fetch method failed, trying alternative approaches');
+                    console.error('Ошибка при скачивании:', error);
                     
-                    // Метод 2: Прямое скачивание через window.open с параметрами
-                    const downloadWindow = window.open(url, '_blank', 'download');
-                    if (!downloadWindow) {
-                        // Метод 3: Создание iframe для скачивания
+                    // Резервный метод 1: Создание ссылки с data URI
+                    try {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        link.target = '_blank';
+                        
+                        // Добавляем специальные атрибуты для принудительного скачивания
+                        link.setAttribute('download', filename);
+                        link.setAttribute('type', 'application/octet-stream');
+                        
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                                         } catch (linkError) {
+                        // Резервный метод 2: Создание iframe для скачивания
                         const iframe = document.createElement('iframe');
                         iframe.style.display = 'none';
                         iframe.src = url;
                         document.body.appendChild(iframe);
                         
-                        // Удаляем iframe через 5 секунд
+                        // Удаляем iframe через 3 секунды
                         setTimeout(() => {
-                            document.body.removeChild(iframe);
-                        }, 5000);
+                            if (iframe.parentNode) {
+                                document.body.removeChild(iframe);
+                            }
+                        }, 3000);
                     }
+                    
+                    // Восстанавливаем кнопку
+                    element.innerHTML = originalText;
+                    element.style.pointerEvents = 'auto';
                 });
-            }
         }
         
         function redirectToExternalBrowser(event) {
